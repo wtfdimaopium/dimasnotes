@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="dimaSNotes">
+<meta name="theme-color" content="#ffffff">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAAAdUlEQVR42u3BMQEAAADCoPVPbQsvoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4G3xzAAG1XkYyAAAAAElFTkSuQmCC">
+<title>dimaSNotes</title>
+<style>
+:root{--bg:#fff;--text:#0a0a0a;--muted:#6b6b6b;--line:#e4e4e4;--panel:#f3f3f3;--ink:#0a0a0a;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
+font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+#app{height:100%;display:flex;flex-direction:column;max-width:560px;margin:0 auto;padding:0 22px}
+.brand{padding-top:22px;animation:fadeIn .6s ease both}
+h1{font-size:30px;line-height:1.1;font-weight:800;letter-spacing:-.03em;margin:0}
+.sub{margin:2px 0 0;color:var(--muted);font-size:14px}
+.view{flex:1;min-height:0;display:flex;flex-direction:column}
+.view[hidden]{display:none}
+.view.in{animation:fadeUp .45s ease both}
+.menu{flex:1;display:flex;flex-direction:column;justify-content:center;gap:14px;padding-bottom:8vh}
+.big{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:92px;padding:0 28px;border:0;border-radius:30px;background:var(--ink);color:#fff;font:inherit;font-size:26px;font-weight:700;letter-spacing:-.01em;cursor:pointer;transition:transform .15s ease}
+.big:active{transform:scale(.97)}
+.view.in .big{animation:fadeUp .55s ease both;animation-delay:calc(var(--i)*80ms + 120ms)}
+.cnt{min-width:36px;height:36px;padding:0 10px;border-radius:999px;background:#fff;color:var(--ink);font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.top{display:flex;align-items:center;gap:14px;padding:18px 0 10px}
+.back{background:var(--panel);border:0;border-radius:999px;color:var(--text);font:inherit;font-size:15px;font-weight:600;padding:9px 16px;cursor:pointer}
+h2{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:0}
+main{flex:1;overflow-y:auto;padding:4px 0 12px}
+.ani{animation:fadeUp .4s ease both}
+.empty{color:var(--muted);padding:32px 0}
+.item{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;margin-bottom:10px;background:var(--panel);border-radius:20px}
+.item .body{flex:1;min-width:0;overflow-wrap:anywhere;white-space:pre-wrap}
+.item.done .body{color:var(--muted);text-decoration:line-through}
+.date{display:block;color:var(--muted);font-size:14px;text-decoration:none}
+.chk{width:22px;height:22px;margin-top:1px;flex:none;border:1.5px solid var(--ink);border-radius:50%;background:none;padding:0;cursor:pointer;transition:background .2s ease}
+.done .chk{background:var(--ink)}
+.del{background:none;border:0;color:var(--muted);font-size:22px;line-height:1;width:28px;height:28px;border-radius:50%;padding:0;cursor:pointer}
+form{display:flex;gap:10px;padding:12px;margin:4px 0 16px;background:var(--panel);border-radius:26px;flex-wrap:wrap}
+input{font:inherit;font-size:16px;color:var(--text);background:#fff;border:1px solid var(--line);border-radius:18px;padding:13px 16px;outline:none}
+input:focus-visible{border-color:var(--ink)}
+#txt{flex:1;min-width:0}
+#when{color-scheme:light}
+.add{background:var(--ink);color:#fff;border:0;border-radius:18px;font:inherit;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:13px 22px;cursor:pointer}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+<header class="brand"><h1>dimaSNotes.</h1><p class="sub">Всё важное в одном месте.</p></header>
+<section id="home" class="view"><div class="menu" id="menu"></div></section>
+<section id="sec" class="view" hidden>
+<div class="top"><button class="back" id="back" type="button">‹ Назад</button><h2 id="stitle"></h2></div>
+<main id="list"></main>
+<form id="f" autocomplete="off">
+<input id="txt" type="text" maxlength="500" enterkeyhint="done">
+<input id="when" type="date" hidden>
+<button class="add" type="submit">Добавить</button>
+</form>
+</section>
+</div>
+<script>
+var KEY='diopnotes-v1',tab=null,data={goals:[],plans:[],notes:[]};
+var NAMES={goals:'Цели',plans:'Планы',notes:'Заметки'};
+var HINT={goals:'Новая цель',plans:'Новый план',notes:'Новая заметка'};
+var EMPTY={goals:'Пока нет целей. Запиши первую.',plans:'Пока нет планов. Добавь дело и, если нужно, дату.',notes:'Пока нет заметок. Запиши мысль, пока она не ушла.'};
+try{var s=localStorage.getItem(KEY);if(s){var p=JSON.parse(s);for(var k in data)if(Array.isArray(p[k]))data[k]=p[k];}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){}}
+function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e;}
+function fmt(d){var a=d.split('-');return a.length==3?a[2]+'.'+a[1]+'.'+a[0]:d;}
+function show(v){['home','sec'].forEach(function(id){var e=document.getElementById(id);e.hidden=id!==v;
+ if(id===v){e.classList.remove('in');void e.offsetWidth;e.classList.add('in');}});}
+function renderHome(){
+ var m=document.getElementById('menu');m.textContent='';
+ Object.keys(NAMES).forEach(function(k,i){
+  var n=data[k].filter(function(x){return !x.done;}).length;
+  var b=el('button','big');b.type='button';b.style.setProperty('--i',i);
+  b.appendChild(el('span','',NAMES[k]));b.appendChild(el('span','cnt',String(n)));
+  b.onclick=function(){tab=k;show('sec');render(true);};m.appendChild(b);});
+}
+function render(animate){
+ document.getElementById('stitle').textContent=NAMES[tab];
+ document.getElementById('txt').placeholder=HINT[tab];
+ document.getElementById('when').hidden=tab!=='plans';
+ var list=document.getElementById('list');list.textContent='';
+ var items=data[tab];
+ if(!items.length){list.appendChild(el('div','empty'+(animate?' ani':''),EMPTY[tab]));return;}
+ items.forEach(function(it,i){
+  var row=el('div','item'+(it.done?' done':'')+(animate?' ani':''));
+  if(animate)row.style.animationDelay=(Math.min(i,8)*45+100)+'ms';
+  if(tab!=='notes'){var c=el('button','chk');c.type='button';c.setAttribute('aria-label','Отметить выполненным');
+   c.onclick=function(){it.done=!it.done;save();render(false);};row.appendChild(c);}
+  var body=el('div','body',it.t);
+  if(it.d){body.appendChild(el('span','date',fmt(it.d)));}
+  row.appendChild(body);
+  var d=el('button','del','×');d.type='button';d.setAttribute('aria-label','Удалить');
+  d.onclick=function(){items.splice(i,1);save();render(false);};
+  row.appendChild(d);list.appendChild(row);});
+}
+document.getElementById('back').onclick=function(){tab=null;renderHome();show('home');};
+document.getElementById('f').onsubmit=function(e){
+ e.preventDefault();
+ var txt=document.getElementById('txt'),w=document.getElementById('when'),v=txt.value.trim();
+ if(!v)return;
+ var it={t:v,done:false};if(tab==='plans'&&w.value)it.d=w.value;
+ data[tab].unshift(it);save();txt.value='';w.value='';render(false);
+ var f=document.getElementById('list').firstChild;if(f)f.classList.add('ani');
+};
+renderHome();show('home');
+</script>
+</body>
+</html>
